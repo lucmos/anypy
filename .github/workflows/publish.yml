@@ -142,6 +142,12 @@ jobs:
           mike deploy --rebase --push --update-aliases ${RELEASE_TAG_VERSION} latest
 
         # Uncomment to publish on PyPI on release
+      - name: Check working directory status
+        run: git status
+
+      - name: Restore working directory (env.yaml Python version)
+        run: git checkout .
+
       - name: Build SDist and wheel
         run: pipx run build
 
