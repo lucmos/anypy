@@ -1,6 +1,6 @@
-site_name: tolpy
+site_name: toolpy
 site_description: A collection of python utilities, without hard dependencies
-repo_url: https://github.com/lucmos/tolpy
+repo_url: https://github.com/lucmos/toolpy
 
 nav:
   - Home: index.md
