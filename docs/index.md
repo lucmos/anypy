@@ -14,7 +14,7 @@ A collection of python utilities, without hard dependencies
 ## Installation
 
 ```bash
-pip install git+ssh://git@github.com/lucmos/anypy.git
+pip install anypy
 ```
 
 
