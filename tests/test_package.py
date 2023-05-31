@@ -1,4 +1,4 @@
 def test_packaging():
-    import toolpy as tp  # noqa
+    import anypy as ap
 
-    assert tp.__version__
+    assert ap.__version__
