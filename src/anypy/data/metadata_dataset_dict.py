@@ -1,23 +1,15 @@
 import json
-import logging
 from os import PathLike
-import os
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, Optional, Union
 
-import hydra
-from datasets import Dataset, DatasetDict, Features, load_dataset
-from omegaconf import ListConfig
-from pytorch_lightning.callbacks import Callback, ModelCheckpoint
-from traitlets import Callable
+from datasets import DatasetDict
 
 CUSTOM_METADATA_KEY = "metadata"
 
 
 class MetadataDatasetDict(DatasetDict):
-    """
-    DatasetDict with an additional dictionary that holds custom metadata.
-    """
+    """DatasetDict with an additional dictionary that holds custom metadata."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -86,40 +78,3 @@ class MetadataDatasetDict(DatasetDict):
     def select(self, indices):
         for k, v in self.items():
             self[k] = v.select(indices)
-
-
-if __name__ == "__main__":
-    train_dataset = load_dataset(
-        "cifar100",
-        split="train",
-        use_auth_token=True,
-    )
-    test_dataset = load_dataset("cifar100", split="test")
-
-    my_dataset = MetadataDatasetDict(train=train_dataset, test=test_dataset)
-
-    assert my_dataset.keys() == ["train", "test"]
-
-    tmp_path = Path("tmp/")
-    tmp_path.mkdir(exist_ok=True)
-
-    my_dataset["metadata"] = {"num_classes": 100, "model": None}
-
-    my_dataset.save_to_disk(tmp_path)
-
-    assert my_dataset.keys() == ["train", "test"]
-
-    my_dataset = MetadataDatasetDict.load_from_disk(tmp_path)
-
-    assert my_dataset.keys() == ["train", "test"]
-
-    my_dataset = my_dataset.map(lambda x: {"new_column": x["fine_label"] * 2})
-
-    assert my_dataset["train"]["new_column"][0] == my_dataset["train"]["fine_label"][0] * 2
-    assert my_dataset["test"]["new_column"][0] == my_dataset["test"]["fine_label"][0] * 2
-
-    my_dataset = my_dataset.filter(lambda x: x["fine_label"] < 10)
-
-    my_dataset.set_format("numpy", columns=["fine_label"])
-    assert (my_dataset["train"]["fine_label"] < 10).all()
-    assert (my_dataset["test"]["fine_label"] < 10).all()
