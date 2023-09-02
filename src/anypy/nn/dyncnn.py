@@ -122,6 +122,11 @@ def infer_convolution2d(
     Returns:
         The convolution instantiated with the inferred parameters.
     """
+    if len(input_shape) != 4:
+        raise ValueError(f"The input shape must be a 4-tuple but {input_shape} was given.")
+    if len(output_shape) != 4:
+        raise ValueError(f"The output shape must be a 4-tuple but {output_shape} was given.")
+
     kernel_size = _ensure_ntuple(kernel_size, n=2)
     stride = _ensure_ntuple(stride, n=2)
     padding = _ensure_ntuple(padding, n=2)
@@ -201,6 +206,11 @@ def infer_transposed_convolution2d(
     Returns:
         The convolution instantiated with the inferred parameters.
     """
+    if len(input_shape) != 4:
+        raise ValueError(f"The input shape must be a 4-tuple but {input_shape} was given.")
+    if len(output_shape) != 4:
+        raise ValueError(f"The output shape must be a 4-tuple but {output_shape} was given.")
+
     kernel_size = _ensure_ntuple(kernel_size, n=2)
     stride = _ensure_ntuple(stride, n=2)
     padding = _ensure_ntuple(padding, n=2)

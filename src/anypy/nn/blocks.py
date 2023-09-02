@@ -177,8 +177,8 @@ def build_dynamic_encoder_decoder(
         input_shape=encoder_output_shape,
         output_shape=input_shape,
     )
-    assert (
-        input_shape == decoder_output_shape
+    assert tuple(input_shape) == tuple(
+        decoder_output_shape
     ), f"Input shape {input_shape} != decoder output shape {decoder_output_shape}"
 
     return encoder, encoder_output_shape, decoder
