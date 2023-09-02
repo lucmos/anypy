@@ -4,47 +4,103 @@ import torch
 from anypy.nn.blocks import DeepProjection, LearningBlock, build_dynamic_encoder_decoder
 
 
-@pytest.mark.parametrize("size", ((28, 28), (32, 32)))
-@pytest.mark.parametrize("channels", (1, 3))
-@pytest.mark.parametrize(
-    "hidden_dims",
-    ((16, 32, 64, 128), (32, 64, 128, 256)),
-)
-@pytest.mark.parametrize(
-    "activation",
-    ("torch.nn.GELU", "torch.nn.ReLU"),
-)
-@pytest.mark.parametrize(
-    "batch_size, use_batch_norm",
-    (
-        (1, False),
-        (4, True),
-        (8, True),
-    ),
-)
-@pytest.mark.parametrize("remove_encoder_last_activation", (True, False))
+@pytest.mark.parametrize("input_size", ((28, 28), (32, 32), (48, 48)))
+@pytest.mark.parametrize("input_channels", (1, 3, 8, 32))
+@pytest.mark.parametrize("batch_size", (1, 3, 8))
 def test_build_dynamic_encoder_decoder(
+    input_size,
+    input_channels,
     batch_size,
-    size,
-    channels,
-    hidden_dims,
-    activation,
-    use_batch_norm,
-    remove_encoder_last_activation,
 ):
-    width, height = size
-    encoder, encoder_out_shape, decoder = build_dynamic_encoder_decoder(
-        width=width,
-        height=height,
-        n_channels=channels,
-        hidden_dims=hidden_dims,
-        activation=activation,
-        use_batch_norm=use_batch_norm,
-        remove_encoder_last_activation=remove_encoder_last_activation,
-    )
+    input_shape = (batch_size, input_channels, *input_size)
+    encoder_layers = [
+        {
+            "_target_": "anypy.nn.dyncnn.infer_convolution2d",
+            "input_shape": "???",
+            "output_shape": (-1, 32, 28, 28),
+            "kernel_size": None,
+            "stride": 1,
+            "padding": 0,
+            "dilation": 1,
+        },
+        {"_target_": "torch.nn.ReLU"},
+        {
+            "_target_": "torch.nn.BatchNorm2d",
+            "num_features": 32,
+        },
+        {
+            "_target_": "anypy.nn.dyncnn.infer_convolution2d",
+            "input_shape": "???",
+            "output_shape": (-1, 32, 14, 14),
+            "kernel_size": 4,
+            "stride": 2,
+            "padding": None,
+            "dilation": 1,
+        },
+        {"_target_": "torch.nn.ReLU"},
+        {
+            "_target_": "anypy.nn.dyncnn.infer_convolution2d",
+            "input_shape": "???",
+            "output_shape": (-1, 16, 7, 7),
+            "kernel_size": None,
+            "stride": 2,
+            "padding": 1,
+            "dilation": 1,
+        },
+        {"_target_": "torch.nn.ReLU"},
+        {
+            "_target_": "torch.nn.BatchNorm2d",
+            "num_features": 16,
+        },
+    ]
 
-    x = torch.zeros([batch_size, channels, width, height])
-    assert encoder(x).shape[1:] == encoder_out_shape[1:]
+    decoder_layers = [
+        {
+            "_target_": "anypy.nn.dyncnn.infer_transposed_convolution2d",
+            "input_shape": "???",
+            "output_shape": (-1, 32, 14, 14),
+            "kernel_size": None,
+            "stride": 2,
+            "padding": 1,
+            "dilation": 1,
+        },
+        {"_target_": "torch.nn.ReLU"},
+        {
+            "_target_": "torch.nn.BatchNorm2d",
+            "num_features": 32,
+        },
+        {
+            "_target_": "anypy.nn.dyncnn.infer_transposed_convolution2d",
+            "input_shape": "???",
+            "output_shape": (-1, 32, 28, 28),
+            "kernel_size": None,
+            "stride": 2,
+            "padding": 1,
+            "dilation": 1,
+        },
+        {"_target_": "torch.nn.ReLU"},
+        {
+            "_target_": "torch.nn.BatchNorm2d",
+            "num_features": 32,
+        },
+        {
+            "_target_": "anypy.nn.dyncnn.infer_transposed_convolution2d",
+            "input_shape": "???",
+            "output_shape": "???",
+            "kernel_size": None,
+            "stride": 1,
+            "padding": 1,
+            "dilation": 1,
+        },
+        {"_target_": "torch.nn.Sigmoid"},
+    ]
+    encoder, latents_shape, decoder = build_dynamic_encoder_decoder(
+        encoder_layers_config=encoder_layers,
+        decoder_layers_config=decoder_layers,
+        input_shape=input_shape,
+    )
+    x = torch.zeros(input_shape)
+    assert encoder(x).shape[1:] == latents_shape[1:] == torch.Size((16, 7, 7))
     assert decoder(encoder(x)).shape == x.shape
 
 
