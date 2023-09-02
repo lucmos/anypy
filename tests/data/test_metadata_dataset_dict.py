@@ -1,17 +1,14 @@
 from pathlib import Path
 
-from datasets import load_dataset
+import torch
+from datasets import Dataset
 
 from anypy.data.metadata_dataset_dict import MetadataDatasetDict
 
 
 def test_dataset_dict(tmp_path: Path):
-    train_dataset = load_dataset(
-        "mnist",
-        split="train",
-        token=False,
-    )
-    test_dataset = load_dataset("mnist", split="test")
+    train_dataset = Dataset.from_dict({"x": torch.randn(100, 50), "label": torch.randint(50, (100,))})
+    test_dataset = Dataset.from_dict({"x": torch.randn(100, 50), "label": torch.randint(50, (100,))})
 
     my_dataset = MetadataDatasetDict(train=train_dataset, test=test_dataset)
 
