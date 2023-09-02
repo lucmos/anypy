@@ -5,28 +5,10 @@ import hydra.utils
 import torch
 from torch import nn
 
+from anypy.nn.dynccn import infer_transposed_convolution2d
+from anypy.nn.utils import infer_dimension
+
 pylogger = logging.getLogger(__name__)
-
-
-def infer_dimension(width: int, height: int, n_channels: int, model: nn.Module, batch_size: int = 8) -> torch.Tensor:
-    """Compute the output of a model given a fake batch.
-
-    Args:
-        width: the width of the image to generate the fake batch
-        height:  the height of the image to generate the fake batch
-        n_channels:  the n_channels of the image to generate the fake batch
-        model: the model to use to compute the output
-        batch_size: batch size to use for the fake output
-
-    Returns:
-        the fake output
-    """
-    with torch.no_grad():
-        model.eval()
-        fake_batch = torch.zeros([batch_size, n_channels, width, height])
-        fake_out = model(fake_batch)
-        model.train()
-        return fake_out
 
 
 class LearningBlock(nn.Module):
@@ -81,39 +63,6 @@ class DeepProjection(nn.Module):
             data = self.dropout(data)
             data = projection_layer(data)
         return data
-
-
-def build_transposed_convolution(
-    in_channels: int,
-    out_channels: int,
-    target_output_width,
-    target_output_height,
-    input_width,
-    input_height,
-    stride: Tuple[int, int] = (1, 1),
-    padding: Tuple[int, int] = (1, 1),
-    output_padding: Tuple[int, int] = (0, 0),
-    dilation: int = 1,
-) -> nn.ConvTranspose2d:
-    # kernel_w = (metadata.width - (fake_out.width −1)×stride[0] + 2×padding[0] - output_padding[0]  - 1)/dilation[0] + 1
-    # kernel_h = (metadata.height - (fake_out.height −1)×stride[1] + 2×padding[1] - output_padding[1]  - 1)/dilation[1] + 1
-    kernel_w = (
-        target_output_width - (input_width - 1) * stride[0] + 2 * padding[0] - output_padding[0] - 1
-    ) / dilation + 1
-    kernel_h = (
-        target_output_height - (input_height - 1) * stride[1] + 2 * padding[1] - output_padding[1] - 1
-    ) / dilation + 1
-    assert kernel_w > 0 and kernel_h > 0
-
-    return nn.ConvTranspose2d(
-        in_channels=in_channels,
-        out_channels=out_channels,
-        kernel_size=(int(kernel_w), int(kernel_h)),
-        stride=stride,
-        padding=padding,
-        output_padding=output_padding,
-        dilation=dilation,
-    )
 
 
 def build_dynamic_encoder_decoder(
@@ -193,13 +142,9 @@ def build_dynamic_encoder_decoder(
     ):
         modules.append(
             nn.Sequential(
-                build_transposed_convolution(
-                    in_channels=hidden_dims[i],
-                    out_channels=hidden_dims[i + 1],
-                    target_output_width=target_output_width,
-                    target_output_height=target_output_height,
-                    input_width=running_input_width,
-                    input_height=running_input_height,
+                infer_transposed_convolution2d(
+                    input_shape=[1, hidden_dims[i], running_input_height, running_input_width],
+                    expected_output_shape=[1, hidden_dims[i + 1], target_output_height, target_output_width],
                     stride=STRIDE,
                     padding=PADDING,
                 ),
