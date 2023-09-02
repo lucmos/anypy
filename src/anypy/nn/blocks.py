@@ -5,7 +5,7 @@ import hydra.utils
 import torch
 from torch import nn
 
-from anypy.nn.dynccn import infer_transposed_convolution2d
+from anypy.nn.dyncnn import infer_transposed_convolution2d
 from anypy.nn.utils import infer_dimension
 
 pylogger = logging.getLogger(__name__)
@@ -144,7 +144,7 @@ def build_dynamic_encoder_decoder(
             nn.Sequential(
                 infer_transposed_convolution2d(
                     input_shape=[1, hidden_dims[i], running_input_height, running_input_width],
-                    expected_output_shape=[1, hidden_dims[i + 1], target_output_height, target_output_width],
+                    output_shape=[1, hidden_dims[i + 1], target_output_height, target_output_width],
                     stride=STRIDE,
                     padding=PADDING,
                 ),

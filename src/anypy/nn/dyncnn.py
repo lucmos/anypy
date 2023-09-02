@@ -97,7 +97,7 @@ def compute_tranpose_conv2d_output_shape(
 
 def infer_convolution2d(
     input_shape: Tuple[int, int, int, int],
-    expected_output_shape: Tuple[int, int, int, int],
+    output_shape: Tuple[int, int, int, int],
     kernel_size: Optional[Union[int, Tuple[int, int]]] = None,
     stride: Optional[Union[int, Tuple[int, int]]] = 1,
     padding: Optional[Union[int, Tuple[int, int]]] = 0,
@@ -110,7 +110,7 @@ def infer_convolution2d(
 
     Args:
         input_shape (tuple): The shape of the input tensor.
-        expected_output_shape (tuple): The shape of the output tensor.
+        output_shape (tuple): The shape of the output tensor.
         kernel_shape (tuple): The shape of the kernel tensor.
         stride (tuple): The stride of the convolution.
         padding (tuple): The padding of the convolution.
@@ -125,7 +125,7 @@ def infer_convolution2d(
     dilation = _ensure_ntuple(dilation, n=2)
 
     _, in_channels, in_height, in_width = input_shape
-    _, out_channels, out_height, out_width = expected_output_shape
+    _, out_channels, out_height, out_width = output_shape
 
     # Ensure that only one parameter is missing.
     if sum(x is None for x in [kernel_size, stride, padding, dilation]) > 1:
@@ -174,7 +174,7 @@ def infer_convolution2d(
 
 def infer_transposed_convolution2d(
     input_shape: Tuple[int, int, int, int],
-    expected_output_shape: Tuple[int, int, int, int],
+    output_shape: Tuple[int, int, int, int],
     kernel_size: Optional[Union[int, Tuple[int, int]]] = None,
     stride: Optional[Union[int, Tuple[int, int]]] = 1,
     padding: Optional[Union[int, Tuple[int, int]]] = 0,
@@ -188,7 +188,7 @@ def infer_transposed_convolution2d(
 
     Args:
         input_shape (tuple): The shape of the input tensor.
-        expected_output_shape (tuple): The shape of the output tensor.
+        output_shape (tuple): The shape of the output tensor.
         kernel_shape (tuple): The shape of the kernel tensor.
         stride (tuple): The stride of the convolution.
         padding (tuple): The padding of the convolution.
@@ -205,7 +205,7 @@ def infer_transposed_convolution2d(
     dilation = _ensure_ntuple(dilation, n=2)
 
     _, in_channels, in_height, in_width = input_shape
-    _, out_channels, out_height, out_width = expected_output_shape
+    _, out_channels, out_height, out_width = output_shape
 
     # Ensure that only one parameter is missing.
     if sum(x is None for x in [kernel_size, stride, padding, output_padding, dilation]) > 1:

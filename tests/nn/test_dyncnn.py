@@ -1,11 +1,11 @@
 import pytest
 import torch
 
-from anypy.nn.dynccn import infer_convolution2d, infer_transposed_convolution2d
+from anypy.nn.dyncnn import infer_convolution2d, infer_transposed_convolution2d
 
 
 @pytest.mark.parametrize(
-    "input_shape, expected_output_shape, kernel_size, stride, padding, dilation",
+    "input_shape, output_shape, kernel_size, stride, padding, dilation",
     [
         ((1, 3, 32, 32), (1, 16, 32, 32), None, (1, 1), (1, 1), (1, 1)),
         ((1, 3, 32, 32), (1, 16, 32, 32), (3, 3), None, (1, 1), (1, 1)),
@@ -30,7 +30,7 @@ from anypy.nn.dynccn import infer_convolution2d, infer_transposed_convolution2d
 )
 def test_infer_convolution(
     input_shape,
-    expected_output_shape,
+    output_shape,
     kernel_size,
     stride,
     padding,
@@ -40,7 +40,7 @@ def test_infer_convolution(
 
     conv = infer_convolution2d(
         input_shape,
-        expected_output_shape,
+        output_shape,
         kernel_size=kernel_size,
         stride=stride,
         padding=padding,
@@ -49,11 +49,11 @@ def test_infer_convolution(
 
     y = conv(x)
 
-    assert y.shape == expected_output_shape
+    assert y.shape == output_shape
 
 
 @pytest.mark.parametrize(
-    "input_shape, expected_output_shape, kernel_size, stride, padding, dilation",
+    "input_shape, output_shape, kernel_size, stride, padding, dilation",
     [
         ((1, 3, 32, 32), (1, 16, 32, 32), None, None, (1, 1), (1, 1)),
         ((1, 3, 32, 32), (1, 16, 32, 32), (3, 3), None, None, (1, 1)),
@@ -65,7 +65,7 @@ def test_infer_convolution(
 )
 def test_infer_convolution_errors(
     input_shape,
-    expected_output_shape,
+    output_shape,
     kernel_size,
     stride,
     padding,
@@ -74,7 +74,7 @@ def test_infer_convolution_errors(
     with pytest.raises(ValueError):
         _ = infer_convolution2d(
             input_shape,
-            expected_output_shape,
+            output_shape,
             kernel_size=kernel_size,
             stride=stride,
             padding=padding,
@@ -83,7 +83,7 @@ def test_infer_convolution_errors(
 
 
 @pytest.mark.parametrize(
-    "input_shape, expected_output_shape, kernel_size, stride, padding, output_padding, dilation",
+    "input_shape, output_shape, kernel_size, stride, padding, output_padding, dilation",
     [
         # kernel
         ((1, 3, 32, 32), (1, 16, 32, 32), None, 1, 0, (0, 0), (1, 1)),
@@ -106,7 +106,7 @@ def test_infer_convolution_errors(
 )
 def test_infer_transposed_convolution(
     input_shape,
-    expected_output_shape,
+    output_shape,
     kernel_size,
     stride,
     padding,
@@ -117,7 +117,7 @@ def test_infer_transposed_convolution(
 
     conv = infer_transposed_convolution2d(
         input_shape,
-        expected_output_shape,
+        output_shape,
         kernel_size=kernel_size,
         stride=stride,
         padding=padding,
@@ -127,11 +127,11 @@ def test_infer_transposed_convolution(
 
     y = conv(x)
 
-    assert y.shape == expected_output_shape
+    assert y.shape == output_shape
 
 
 @pytest.mark.parametrize(
-    "input_shape, expected_output_shape, kernel_size, stride, padding, output_padding, dilation",
+    "input_shape, output_shape, kernel_size, stride, padding, output_padding, dilation",
     [
         ((1, 3, 32, 32), (1, 16, 32, 32), None, None, (1, 1), None, (1, 1)),
         ((1, 3, 32, 32), (1, 16, 32, 32), (3, 3), None, None, None, (1, 1)),
@@ -149,7 +149,7 @@ def test_infer_transposed_convolution(
 )
 def test_infer_tranpose_convolution_errors(
     input_shape,
-    expected_output_shape,
+    output_shape,
     kernel_size,
     stride,
     padding,
@@ -159,7 +159,7 @@ def test_infer_tranpose_convolution_errors(
     with pytest.raises(ValueError):
         _ = infer_transposed_convolution2d(
             input_shape,
-            expected_output_shape,
+            output_shape,
             kernel_size=kernel_size,
             stride=stride,
             padding=padding,
