@@ -1,12 +1,10 @@
 import logging
-from typing import Optional, Sequence, Tuple
+from typing import Dict, Sequence, Tuple
 
-import hydra.utils
 import torch
 from torch import nn
 
-from anypy.nn.dyncnn import infer_transposed_convolution2d
-from anypy.nn.utils import infer_dimension
+from anypy.nn.dyncnn import build_nn
 
 pylogger = logging.getLogger(__name__)
 
@@ -66,100 +64,121 @@ class DeepProjection(nn.Module):
 
 
 def build_dynamic_encoder_decoder(
-    width,
-    height,
-    n_channels,
-    hidden_dims: Optional[Sequence[int]],
-    activation: str = "torch.nn.GELU",
-    use_batch_norm: bool = True,
-    remove_encoder_last_activation: bool = False,
+    input_shape: Sequence[int],
+    encoder_layers_config: Sequence[Dict],
+    decoder_layers_config: Sequence[Dict],
 ) -> Tuple[nn.Module, Sequence[int], nn.Module]:
-    """Builds a dynamic convolutional encoder-decoder pair with parametrized hidden dimensions number and size.
+    """Builds a dynamic convolutional encoder-decoder model that accepts the given input shape.
+
+    The missing parameters are inferred from the input shape and the given configuration.
+    See also: `build_nn` for a more general version of this function.
+
+    Example of a AE configuration:
+    ```python
+    encoder_layers = [
+        {
+            "_target_": "anypy.nn.dyncnn.infer_convolution2d",
+            "input_shape": "???",
+            "output_shape": (-1, 32, 28, 28),
+            "kernel_size": None,
+            "stride": 1,
+            "padding": 0,
+            "dilation": 1,
+        },
+        {"_target_": "torch.nn.ReLU"},
+        {
+            "_target_": "torch.nn.BatchNorm2d",
+            "num_features": 32,
+        },
+        {
+            "_target_": "anypy.nn.dyncnn.infer_convolution2d",
+            "input_shape": "???",
+            "output_shape": (-1, 32, 14, 14),
+            "kernel_size": 4,
+            "stride": 2,
+            "padding": None,
+            "dilation": 1,
+        },
+        {"_target_": "torch.nn.ReLU"},
+        {
+            "_target_": "anypy.nn.dyncnn.infer_convolution2d",
+            "input_shape": "???",
+            "output_shape": (-1, 16, 7, 7),
+            "kernel_size": None,
+            "stride": 2,
+            "padding": 1,
+            "dilation": 1,
+        },
+        {"_target_": "torch.nn.ReLU"},
+        {
+            "_target_": "torch.nn.BatchNorm2d",
+            "num_features": 16,
+        },
+    ]
+
+
+    decoder_layers = [
+        {
+            "_target_": "anypy.nn.dyncnn.infer_transposed_convolution2d",
+            "input_shape": "???",
+            "output_shape": (-1, 32, 14, 14),
+            "kernel_size": None,
+            "stride": 2,
+            "padding": 1,
+            "dilation": 1,
+        },
+        {"_target_": "torch.nn.ReLU"},
+        {
+            "_target_": "torch.nn.BatchNorm2d",
+            "num_features": 32,
+        },
+        {
+            "_target_": "anypy.nn.dyncnn.infer_transposed_convolution2d",
+            "input_shape": "???",
+            "output_shape": (-1, 32, 28, 28),
+            "kernel_size": None,
+            "stride": 2,
+            "padding": 1,
+            "dilation": 1,
+        },
+        {"_target_": "torch.nn.ReLU"},
+        {
+            "_target_": "torch.nn.BatchNorm2d",
+            "num_features": 32,
+        },
+        {
+            "_target_": "anypy.nn.dyncnn.infer_transposed_convolution2d",
+            "input_shape": "???",
+            "output_shape": "???",
+            "kernel_size": None,
+            "stride": 1,
+            "padding": 1,
+            "dilation": 1,
+        },
+        {"_target_": "torch.nn.Sigmoid"},
+    ]
+    ```
 
     Args:
-        width: the width of the images to work with
-        height: the height of the images
-        n_channels: the number of channels of the images
-        hidden_dims: a sequence of ints to specify the number and size of the hidden layers in the encoder and decoder
-        activation: the activation function to use
-        use_batch_norm: whether to use batch normalization
-        remove_encoder_last_activation: whether to remove the last activation in the encoder
+        input_shape: the input shape of the model.
+        encoder_layers_config: the configuration of the encoder layers.
+        decoder_layers_config: the configuration of the decoder layers.
 
     Returns:
-        the encoder model, the shape in the latent space assuming batch size 1, the decoder module.
+        the encoder model, the shape in the latent space,  the decoder module
     """
-    modules = []
-
-    if hidden_dims is None:
-        hidden_dims = (32, 64, 128, 256)
-
-    STRIDE = (2, 2)
-    PADDING = (1, 1)
-
-    # Build Encoder
-    encoder_shape_sequence = [
-        [width, height],
-    ]
-    running_channels = n_channels
-    for i, h_dim in enumerate(hidden_dims):
-        modules.append(
-            nn.Sequential(
-                (
-                    conv2d := nn.Conv2d(
-                        running_channels, out_channels=h_dim, kernel_size=4, stride=STRIDE, padding=PADDING
-                    )
-                ),
-                nn.BatchNorm2d(h_dim) if use_batch_norm else nn.Identity(),
-                nn.Identity()
-                if i == len(hidden_dims) - 1 and remove_encoder_last_activation
-                else hydra.utils.instantiate({"_target_": activation}),
-            )
-        )
-        conv2d_out = infer_dimension(
-            encoder_shape_sequence[-1][0],
-            encoder_shape_sequence[-1][1],
-            running_channels,
-            conv2d,
-        )
-        encoder_shape_sequence.append([conv2d_out.shape[2], conv2d_out.shape[3]])
-        running_channels = h_dim
-
-    encoder = nn.Sequential(*modules)
-
-    encoder_out_shape = infer_dimension(width, height, n_channels=n_channels, model=encoder, batch_size=1).shape
-
-    pylogger.info(f"Encoder output shape: {encoder_out_shape}")
-
-    # Build Decoder
-    hidden_dims = list(reversed(hidden_dims))
-    hidden_dims = hidden_dims + hidden_dims[-1:]
-
-    running_input_width = encoder_out_shape[2]
-    running_input_height = encoder_out_shape[3]
-    modules = []
-    for i, (target_output_width, target_output_height) in zip(
-        range(len(hidden_dims) - 1), reversed(encoder_shape_sequence[:-1])
-    ):
-        modules.append(
-            nn.Sequential(
-                infer_transposed_convolution2d(
-                    input_shape=[1, hidden_dims[i], running_input_height, running_input_width],
-                    output_shape=[1, hidden_dims[i + 1], target_output_height, target_output_width],
-                    stride=STRIDE,
-                    padding=PADDING,
-                ),
-                nn.BatchNorm2d(hidden_dims[i + 1]) if use_batch_norm else nn.Identity(),
-                hydra.utils.instantiate({"_target_": activation}),
-            )
-        )
-        running_input_width = target_output_width
-        running_input_height = target_output_height
-
-    decoder = nn.Sequential(
-        *modules,
-        nn.Sequential(
-            nn.Conv2d(hidden_dims[-1], out_channels=n_channels, kernel_size=3, padding=1),
-            nn.Sigmoid(),
-        ),
+    encoder, encoder_output_shape = build_nn(
+        encoder_layers_config,
+        input_shape=input_shape,
     )
-    return encoder, encoder_out_shape, decoder
+
+    decoder, decoder_output_shape = build_nn(
+        decoder_layers_config,
+        input_shape=encoder_output_shape,
+        output_shape=input_shape,
+    )
+    assert (
+        input_shape == decoder_output_shape
+    ), f"Input shape {input_shape} != decoder output shape {decoder_output_shape}"
+
+    return encoder, encoder_output_shape, decoder

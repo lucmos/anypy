@@ -1,6 +1,9 @@
 import logging
-from typing import Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
+import hydra
+import torch
+from omegaconf import OmegaConf
 from torch import nn
 
 pylogger = logging.getLogger(__name__)
@@ -278,3 +281,91 @@ def infer_transposed_convolution2d(
         dilation=dilation,
         **kwargs,
     )
+
+
+def build_nn(
+    nn_config: List[Dict[str, Any]],
+    input_shape: Tuple[int, ...],
+    output_shape: Optional[Tuple[int, ...]] = None,
+) -> Tuple[nn.Module, torch.Size]:
+    """Builds a neural network from a list of layer configurations.
+
+    The layer configuration are instantiated with hydra.utils.instantiate.
+    The input_shape and output_shape is injected into the layer configuration when it is missing "???",
+    following the OmegaConf conventions.
+
+    Example of a valid `nn_config`:
+
+    ```python
+    encoder_layers = [
+        {
+            "_target_": "anypy.nn.dyncnn.infer_convolution2d",
+            "input_shape": "???",
+            "output_shape": (-1, 32, 28, 28),
+            "kernel_size": None,
+            "stride": 1,
+            "padding": 0,
+            "dilation": 1,
+        },
+        {"_target_": "torch.nn.ReLU"},
+        {
+            "_target_": "torch.nn.BatchNorm2d",
+            "num_features": 32,
+        },
+        {
+            "_target_": "anypy.nn.dyncnn.infer_convolution2d",
+            "input_shape": "???",
+            "output_shape": (-1, 32, 14, 14),
+            "kernel_size": 4,
+            "stride": 2,
+            "padding": None,
+            "dilation": 1,
+        },
+        {"_target_": "torch.nn.ReLU"},
+        {
+            "_target_": "anypy.nn.dyncnn.infer_convolution2d",
+            "input_shape": "???",
+            "output_shape": (-1, 16, 7, 7),
+            "kernel_size": None,
+            "stride": 2,
+            "padding": 1,
+            "dilation": 1,
+        },
+        {"_target_": "torch.nn.ReLU"},
+        {
+            "_target_": "torch.nn.BatchNorm2d",
+            "num_features": 16,
+        },
+    ]
+    ```
+
+    Args:
+        nn_config (List[Dict[str, Any]]): The list of layer configurations in hydra format.
+        input_shape (Tuple[int, ...]): The input shape of the neural network.
+        output_shape (Optional[Tuple[int, ...]], optional): The output shape of the neural network. Defaults to None.
+
+    Returns:
+        Tuple[nn.Module, torch.Size]: The neural network and the output shape.
+    """
+    # OmegaConf does not support torch.Size sequences
+    input_shape = list(input_shape)
+    if output_shape is not None:
+        output_shape = list(output_shape)
+
+    layers = nn.ModuleList()
+
+    for layer_config in nn_config:
+        layer_config = OmegaConf.create(layer_config)
+
+        if OmegaConf.is_missing(layer_config, "input_shape"):
+            layer_config["input_shape"] = input_shape
+
+        if output_shape is not None and OmegaConf.is_missing(layer_config, "output_shape"):
+            layer_config["output_shape"] = output_shape
+
+        layers.append(hydra.utils.instantiate(layer_config))
+
+        if "output_shape" in layer_config and not OmegaConf.is_missing(layer_config, "output_shape"):
+            input_shape = layer_config["output_shape"]
+
+    return nn.Sequential(*layers), torch.Size(input_shape)
