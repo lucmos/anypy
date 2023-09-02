@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 from torch import nn
 
@@ -98,10 +98,10 @@ def compute_tranpose_conv2d_output_shape(
 def infer_convolution2d(
     input_shape: Tuple[int, int, int, int],
     expected_output_shape: Tuple[int, int, int, int],
-    kernel_size: Optional[Tuple[int, int]] = None,
-    stride: Optional[Tuple[int, int]] = None,
-    padding: Optional[Tuple[int, int]] = None,
-    dilation: Optional[int] = None,
+    kernel_size: Optional[Union[int, Tuple[int, int]]] = None,
+    stride: Optional[Union[int, Tuple[int, int]]] = 1,
+    padding: Optional[Union[int, Tuple[int, int]]] = 0,
+    dilation: Optional[Union[int, Tuple[int, int]]] = 1,
     **kwargs,
 ) -> nn.Conv2d:
     """Infer the missing parameter of a convolution operation.
@@ -175,11 +175,11 @@ def infer_convolution2d(
 def infer_transposed_convolution2d(
     input_shape: Tuple[int, int, int, int],
     expected_output_shape: Tuple[int, int, int, int],
-    kernel_size: Optional[Tuple[int, int]] = None,
-    stride: Optional[Tuple[int, int]] = None,
-    padding: Optional[Tuple[int, int]] = None,
-    output_padding: Optional[Tuple[int, int]] = None,
-    dilation: Optional[int] = None,
+    kernel_size: Optional[Union[int, Tuple[int, int]]] = None,
+    stride: Optional[Union[int, Tuple[int, int]]] = 1,
+    padding: Optional[Union[int, Tuple[int, int]]] = 0,
+    output_padding: Optional[Union[int, Tuple[int, int]]] = 0,
+    dilation: Optional[Union[int, Tuple[int, int]]] = 1,
     **kwargs,
 ) -> nn.ConvTranspose2d:
     """Infer the missing parameter of a convolution operation.
