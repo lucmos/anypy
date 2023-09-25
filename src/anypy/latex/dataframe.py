@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Sequence, Tuple
+from typing import Callable, Dict, Optional, Sequence, Tuple
 
 import pandas as pd
 
@@ -10,6 +10,7 @@ def df2table_meanstd(
     label_mapping: Optional[Dict[str, str]] = None,
     caption: Optional[str] = None,
     precision: int = 2,
+    postprocess_pivot: Optional[Callable[[pd.DataFrame], pd.DataFrame]] = None,
 ) -> Tuple[pd.DataFrame, str]:
     """Convert a dataframe to a latex table with mean and std for each metric.
 
@@ -25,6 +26,7 @@ def df2table_meanstd(
         label_mapping: a mapping from old labels to new labels.
         caption: the caption of the latex table.
         precision: the precision of the numbers.
+        postprocess_pivot: a function to postprocess the pivot table.
 
 
     Returns:
@@ -36,6 +38,8 @@ def df2table_meanstd(
         values=metrics,
         aggfunc=["mean", "std"],
     )
+    if postprocess_pivot is not None:
+        result = postprocess_pivot(result)
 
     # Retrieve the list of metrics
     metrics_name = sorted(set(result.columns.levels[1]))
