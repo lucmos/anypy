@@ -36,6 +36,7 @@ def df2table_meanstd(
     result = df.pivot_table(
         index=rows,
         values=metrics,
+        sort=False,
         aggfunc=["mean", "std"],
     )
     if postprocess_pivot is not None:
