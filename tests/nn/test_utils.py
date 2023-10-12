@@ -7,7 +7,7 @@ from anypy.nn.utils import calculate_adaptive_weight
 
 
 @pytest.mark.parametrize("dim", [10, 100, 1000])
-def test_calculate_adaptive_weight(dim: Tuple[10, 100, 1000]):
+def test_calculate_adaptive_weight(dim: Tuple[int, int, int]):
     layer = torch.randn(dim, requires_grad=True, dtype=torch.double)
 
     linear_a = torch.randn((dim, dim), dtype=torch.double)
