@@ -44,7 +44,7 @@ class MetadataDatasetDict(DatasetDict):
         Path(dataset_dict_path).mkdir(exist_ok=True, parents=True)
         self.save_metadata(Path(dataset_dict_path) / f"{CUSTOM_METADATA_KEY}.json")
         super().save_to_disk(
-            dataset_dict_path,
+            str(dataset_dict_path),
             fs=fs,
             max_shard_size=max_shard_size,
             num_shards=num_shards,
@@ -65,7 +65,7 @@ class MetadataDatasetDict(DatasetDict):
     ) -> "MetadataDatasetDict":
         dataset = MetadataDatasetDict(
             DatasetDict.load_from_disk(
-                dataset_dict_path,
+                str(dataset_dict_path),
                 fs=fs,
                 keep_in_memory=keep_in_memory,
                 storage_options=storage_options,
