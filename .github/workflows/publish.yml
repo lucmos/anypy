@@ -139,7 +139,7 @@ jobs:
         run: |
           git config user.name ci-bot
           git config user.email ci-bot@ci.com
-          mike deploy --rebase --push --update-aliases ${RELEASE_TAG_VERSION} latest
+          mike deploy --push --update-aliases ${RELEASE_TAG_VERSION} latest
 
         # Uncomment to publish on PyPI on release
       - name: Check working directory status
